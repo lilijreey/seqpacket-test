@@ -87,6 +87,33 @@ int main(int argc, char** argv) {
         }
 
         while (true) {
+#ifdef NONBLOCKING
+            fd_set r, w;
+            FD_ZERO(&r);
+            FD_ZERO(&w);
+            FD_SET(sock, &r);
+            FD_SET(sock, &w);
+            if (select(sock + 1, &r, &w, NULL, NULL) == -1) {
+                fatal("select");
+            }
+
+            if (FD_ISSET(sock, &r)) {
+                char buf[10];
+                ssize_t consumed = read(sock, &buf, sizeof(buf));
+
+                if (consumed == 0) {
+                    printf("read: end of file\n");
+                    break;
+                } else if (consumed == -1) {
+                    perror("read");
+                    break;
+                }
+            }
+
+            if (!FD_ISSET(sock, &w)) {
+                continue;
+            }
+#endif
             ssize_t written = write(sock, msg, sizeof(msg));
             if (written != sizeof(msg)) {
                 perror("write");
