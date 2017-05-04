@@ -26,13 +26,17 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
+
+#define NONBLOCKING
 
 const char msg[10296] = { 0xAF };
 
@@ -46,6 +50,12 @@ int main(int argc, char** argv) {
     if (server_socket == -1) {
         fatal("socket");
     }
+
+#ifdef NONBLOCKING
+    if (fcntl(server_socket, F_SETFL, O_NONBLOCK) == -1) {
+        fatal("fcntl");
+    }
+#endif
 
     struct sockaddr_un bound_name;
     memset(&bound_name, 0x00, sizeof(bound_name));
@@ -62,6 +72,15 @@ int main(int argc, char** argv) {
     }
 
     while (true) {
+#ifdef NONBLOCKING
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(server_socket, &readfds);
+
+        if (select(server_socket + 1, &readfds, NULL, NULL, NULL) == -1) {
+            fatal("select");
+        }
+#endif
         int sock = accept(server_socket, NULL, NULL);
         if (sock == -1) {
             fatal("accept");
