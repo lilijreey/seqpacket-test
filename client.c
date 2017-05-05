@@ -34,7 +34,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
-char buf[10296];
+char buf[8192];
 
 void fatal(const char* msg) {
     perror(msg);
@@ -57,15 +57,27 @@ int main(int argc, char** argv) {
         fatal("connect");
     }
 
+    struct msghdr mhdr;
+    memset(&mhdr, 0x00, sizeof(mhdr));
+
+    struct iovec riov;
+    riov.iov_base = buf;
+    riov.iov_len = sizeof(buf);
+
+    mhdr.msg_iov = &riov;
+    mhdr.msg_iovlen = 1;
+
     while (true) {
-        ssize_t consumed = read(sock, &buf, sizeof(buf));
-        if (consumed == 0) {
-            printf("read: end of file\n");
-        } else if (consumed == -1) {
-            fatal("read");
-        } else if (consumed != sizeof(buf)) {
-            printf("Got unexpectedly small message: %zd bytes\n", consumed);
-            return 2;
+        ssize_t consumed = recvmsg(sock, &mhdr, 0);
+        bool got_eor = (mhdr.msg_flags & MSG_EOR) == MSG_EOR;
+        bool got_errqueue = (mhdr.msg_flags & MSG_ERRQUEUE) == MSG_ERRQUEUE;
+        printf("Return value is %zd, EOR is %d, ERRQUEUE is %d\n", consumed, (int) got_eor, (int) got_errqueue);
+        if (consumed == -1) {
+            fatal("recvmsg");
+        } else if ((mhdr.msg_flags & MSG_TRUNC) == MSG_TRUNC) {
+            fprintf(stderr, "recvmsg: message too big\n");
+        } else {
+            printf("%.*s\n", (int) consumed, buf);
         }
     }
 
