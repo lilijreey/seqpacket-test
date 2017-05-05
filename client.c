@@ -69,11 +69,10 @@ int main(int argc, char** argv) {
 
     while (true) {
         ssize_t consumed = recvmsg(sock, &mhdr, 0);
-        bool got_eor = (mhdr.msg_flags & MSG_EOR) == MSG_EOR;
-        bool got_errqueue = (mhdr.msg_flags & MSG_ERRQUEUE) == MSG_ERRQUEUE;
-        printf("Return value is %zd, EOR is %d, ERRQUEUE is %d\n", consumed, (int) got_eor, (int) got_errqueue);
         if (consumed == -1) {
             fatal("recvmsg");
+        } else if ((mhdr.msg_flags & MSG_EOR) == 0) {
+            break;
         } else if ((mhdr.msg_flags & MSG_TRUNC) == MSG_TRUNC) {
             fprintf(stderr, "recvmsg: message too big\n");
         } else {
