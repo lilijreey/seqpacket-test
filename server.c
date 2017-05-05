@@ -48,8 +48,8 @@ void fatal(const char* msg) {
     exit(1);
 }
 
-void checked_send(int sockfd, const void* buf, size_t len, int flags) {
-    ssize_t rv = send(sockfd, buf, len, flags);
+void checked_send(int sockfd, const void* buf, size_t len) {
+    ssize_t rv = send(sockfd, buf, len, MSG_EOR);
     if (rv == -1) {
         fatal("send");
     } else if (rv != len) {
@@ -84,13 +84,13 @@ int main(int argc, char** argv) {
             fatal("accept");
         }
 
-        checked_send(sock, title, strlen(title), 0);
-        checked_send(sock, NULL, 0, 0);
-        checked_send(sock, paragraph1, strlen(paragraph1), 0);
-        checked_send(sock, NULL, 0, 0);
-        checked_send(sock, paragraph2, strlen(paragraph2), 0);
-        checked_send(sock, NULL, 0, 0);
-        checked_send(sock, paragraph3, strlen(paragraph3), 0);
+        checked_send(sock, title, strlen(title));
+        checked_send(sock, NULL, 0);
+        checked_send(sock, paragraph1, strlen(paragraph1));
+        checked_send(sock, NULL, 0);
+        checked_send(sock, paragraph2, strlen(paragraph2));
+        checked_send(sock, NULL, 0);
+        checked_send(sock, paragraph3, strlen(paragraph3));
 
         close(sock);
     }
